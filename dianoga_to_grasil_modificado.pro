@@ -1,5 +1,5 @@
 pro dia_to_g3d, win, ireg, biased_progenitor, direct_progenitor, masks, write=write
-  
+
   n_s    = 0L
   n_g    = 0L
   n_bh   = 0L
@@ -19,7 +19,7 @@ pro dia_to_g3d, win, ireg, biased_progenitor, direct_progenitor, masks, write=wr
            'D21','D22','D23','D24','D25','D26','D27','D28','D29']
 
   flav='BH2015'
-  snap='091'
+  snap='032'
   
   snap_name = simu_dir+regions[ireg]+'/'+flav+'/snap_'+snap
   sub_name  = simu_dir+regions[ireg]+'/'+flav+'/Subfind/groups_'+snap+'/sub_'+snap
@@ -63,29 +63,33 @@ pro dia_to_g3d, win, ireg, biased_progenitor, direct_progenitor, masks, write=wr
   readnew, sub_name, grnr, 'GRNR'  ; grupo al que pertenece un dado subhalo
   readnew, sub_name, mtot, 'MTOT'  ; masa total de todas las particulas pertenecientes al subhalo
     
-  ;mgroup = mtot[1:10]
-  ;mfsub  = smst[4,fsub[1:10]]      ; masas de los subhalos principales, aquellos que contienen BCG+ICL    
-  ;print, mfsub, mgroup
-
   pos_cdm = dblarr(3,2)  
   if biased_progenitor eq 1 then begin
+    print,''
     print,'BIASED-PROGENITOR ACTIVATED'
     pos_cdm[*,0] = spos(*,fsub[0])
-    ;print,'POS CENTER OF MASS: ', pos_cdm[*,0]
   endif
 
   if direct_progenitor eq 1 then begin
+    print,''
     print,'DIRECT-PROGENITOR ACTIVATED'
-    ; find progenitor
-    progenitor = 1
+    print,''
+    progenitors   = looking_progenitors(ireg, 0, 91, UINT(snap), 1, 1, 0, 0, 1, 0, 15, yhist, mass)
+    print,''
+    progenitor    = progenitors[1]
     group         = grnr[progenitor]
     main_of_group = fsub[group]
+
+    fname='progenitors.dat'
+    openw,21,fname,/append
+    printf,21, 'D'+strtrim(string(ireg),2),progenitor,group,main_of_group, FORMAT='(A6,2X,I10,2X,I10,2X,I10)'
+    close,21
+
     if group eq 0 and progenitor eq main_of_group then begin
       print,'DIRECT PROGENITOR IS THE SAME AS THE BIASED PROGENITOR'
     endif else begin
       pos_cdm[*,1] = spos(*,progenitor)
       print,'DIRECT PROGENITOR IS NOT BIASED PROGENITOR'
-      ;print,'POS CENTER OF MASS OF PROGENITOR: ', pos_cdm[*,1]
     endelse 
   endif
     
@@ -106,15 +110,15 @@ pro dia_to_g3d, win, ireg, biased_progenitor, direct_progenitor, masks, write=wr
       ind_box_g  = where(abs(pos_g[0,*]-pos_cdm[0,prog])  lt box_half_gadget and abs(pos_g[1,*]-pos_cdm[1,prog])  lt box_half_gadget and abs(pos_g[2,*]-pos_cdm[2,prog])  lt box_half_gadget)
       ind_box_s  = where(abs(pos_s[0,*]-pos_cdm[0,prog])  lt box_half_gadget and abs(pos_s[1,*]-pos_cdm[1,prog])  lt box_half_gadget and abs(pos_s[2,*]-pos_cdm[2,prog])  lt box_half_gadget)
       ind_box_bh = where(abs(pos_bh[0,*]-pos_cdm[0,prog]) lt box_half_gadget and abs(pos_bh[1,*]-pos_cdm[1,prog]) lt box_half_gadget and abs(pos_bh[2,*]-pos_cdm[2,prog]) lt box_half_gadget)
-      pos_g_  = pos_g[*,ind_box_g]   & M_g=M_g[ind_box_g]    & Z_g=Z_g[*,ind_box_g] & rho_g=rho_g[ind_box_g] & cldx_g=cldx_g[ind_box_g] & t_g=t_g[ind_box_g]
-      pos_s_  = pos_s[*,ind_box_s]   & M_s=M_s[ind_box_s]    & Mi_s=Mi_s[ind_box_s] & Z_s=Z_s[*,ind_box_s]   & age_s=age_s[ind_box_s] 
-      pos_bh_ = pos_bh[*,ind_box_bh] & M_bh=M_bh[ind_box_bh] & Mdot_bh=Mdot_bh[ind_box_bh] 
+      pos_g_  = pos_g[*,ind_box_g]   & M_g_=M_g[ind_box_g]    & Z_g_=Z_g[*,ind_box_g] & rho_g_=rho_g[ind_box_g] & cldx_g_=cldx_g[ind_box_g] & t_g_=t_g[ind_box_g]
+      pos_s_  = pos_s[*,ind_box_s]   & M_s_=M_s[ind_box_s]    & Mi_s_=Mi_s[ind_box_s] & Z_s_=Z_s[*,ind_box_s]   & age_s_=age_s[ind_box_s] 
+      pos_bh_ = pos_bh[*,ind_box_bh] & M_bh_=M_bh[ind_box_bh] & Mdot_bh_=Mdot_bh[ind_box_bh] 
     endif else begin
     endelse
   
-    ind_dusty=where(cldx_g gt 0 or t_g lt 1e5, nind_dusty)
+    ind_dusty=where(cldx_g_ gt 0 or t_g_ lt 1e5, nind_dusty)
     print, 'N DUSTY= ', nind_dusty 
-    pos_g_ = pos_g[*,ind_dusty] & M_g=M_g[ind_dusty] & Z_g=Z_g[*,ind_dusty] & rho_g=rho_g[ind_dusty] & cldx_g=cldx_g[ind_dusty]
+    pos_g_ = pos_g_[*,ind_dusty] & M_g_=M_g_[ind_dusty] & Z_g_=Z_g_[*,ind_dusty] & rho_g_=rho_g_[ind_dusty] & cldx_g_=cldx_g[ind_dusty]
   
     for i=0,2 do begin                   ; refer coordinates to centre of selected object
       pos_g_[i,*]  = pos_g_[i,*] -pos_cdm[i,prog]
@@ -122,22 +126,22 @@ pro dia_to_g3d, win, ireg, biased_progenitor, direct_progenitor, masks, write=wr
       pos_bh_[i,*] = pos_bh_[i,*]-pos_cdm[i,prog]
     endfor
    
-    n_g   = n_elements(M_g)
-    n_s   = n_elements(M_s)
-    n_bh  = n_elements(M_bh)
+    n_g   = n_elements(M_g_)
+    n_s   = n_elements(M_s_)
+    n_bh  = n_elements(M_bh_)
     n_tot = n_g+n_s+n_bh
   
     ; units conversions here only Mdot_bh in order to have the possibility to select BH particles to plot
-    Mdot_bh = Mdot_bh*1e10/hubble*0.98/1e9  
+    Mdot_bh_ = Mdot_bh_*1e10/hubble*0.98/1e9  
 
     if 1 then begin
       device, true=24, retain=2, decomposed=0 
        loadct, 12
        window, win, xsize=700, ysize=700
-       plot, [0],[0], XRANGE= [-300,300], YRANGE= [-300,300], psym=3, xstyle=1, ystyle=1, /nodata
-       oplot, pos_s_[0,*]/(1+z)/hubble, pos_s_[1,*]/(1+z)/hubble, psym=3, color=100
-       oplot, pos_g_[0,*]/(1+z)/hubble, pos_g_[1,*]/(1+z)/hubble, psym=3, color=200
-       oplot, pos_BH_[0,*], pos_BH[1,*], psym=4, color=cgColor('orange')
+       plot,[0],[0], XRANGE= [-300,300], YRANGE= [-300,300], psym=3, xstyle=1, ystyle=1, /nodata
+       oplot,pos_s_[0,*]/(1+z)/hubble, pos_s_[1,*]/(1+z)/hubble, psym=3, color=100
+       oplot,pos_g_[0,*]/(1+z)/hubble, pos_g_[1,*]/(1+z)/hubble, psym=3, color=200
+       oplot,pos_BH_[0,*], pos_BH[1,*], psym=4, color=cgColor('orange')
        window, win+1, xsize=700, ysize=700
        plot, [0], [0], XRANGE= [-300,300], YRANGE= [-300,300], psym=3, xstyle=1, ystyle=1, /nodata
        oplot, pos_s_[0,*]/(1+z)/hubble, pos_s_[2,*]/(1+z)/hubble, psym=3, color=100
@@ -149,21 +153,20 @@ pro dia_to_g3d, win, ireg, biased_progenitor, direct_progenitor, masks, write=wr
     pos_g_  = pos_g_/(1+z)/hubble
     pos_s_  = pos_s_/(1+z)/hubble
     pos_bh_ = pos_bh_/(1+z)/hubble
+    n_ele = n_elements(z_g_)/n_elements(M_g_)        ; number of chemical elements followed in the simulation
   
-    n_ele = n_elements(z_g)/n_elements(M_g)        ; number of chemical elements followed in the simulation
-  
-    met_g = total(Z_g[1:n_ele-1,*],1)/M_g
-    met_s = total(Z_s[1:n_ele-1,*],1)/M_s
-    M_g_   = M_g*1e10/hubble                          
-    M_s_   = M_s*1e10/hubble
-    Mi_s_  = Mi_s*1e10/hubble
-    age_s = galage(z,100,H0=hubble*100,lambda0=omega_lambda,omega_m=omega_m)-galage(1/age_s-1, 100,H0=hubble*100,lambda0=omega_lambda,omega_m=omega_m)
-    age_s = age_s*1e-9
+    met_g = total(Z_g_[1:n_ele-1,*],1)/M_g_
+    met_s = total(Z_s_[1:n_ele-1,*],1)/M_s_
+    M_g_   = M_g_*1e10/hubble                          
+    M_s_   = M_s_*1e10/hubble
+    Mi_s_  = Mi_s_*1e10/hubble
+    age_s_ = galage(z,100,H0=hubble*100,lambda0=omega_lambda,omega_m=omega_m)-galage(1/age_s_-1, 100,H0=hubble*100,lambda0=omega_lambda,omega_m=omega_m)
+    age_s_ = age_s*1e-9
     min_allowed_age = 1e-4
-    jovenes = where(age_s lt min_allowed_age,njov)
-    if njov gt 0 then age_s[jovenes] = min_allowed_age
-    rho_g = rho_g*(1+z)^3*hubble^2*1e10*1e9        
-    M_bh_  = M_bh*1e10/hubble
+    jovenes = where(age_s_ lt min_allowed_age,njov)
+    if njov gt 0 then age_s_[jovenes] = min_allowed_age
+    rho_g_ = rho_g_*(1+z)^3*hubble^2*1e10*1e9        
+    M_bh_  = M_bh_*1e10/hubble
   
     if keyword_set(write) then begin
       print, 'WRITING FILE ', file_out_name
@@ -172,14 +175,14 @@ pro dia_to_g3d, win, ireg, biased_progenitor, direct_progenitor, masks, write=wr
       ;printf, uni, -666.666 , n_tot,  1        ;Guardo todas las particulas
       printf, uni, -666.666 , n_tot-n_g,  1     ;No guardo particulas de gas-> engaño para desconsiderar polvo
       for i=0L, n_s-1 do begin
-        printf, uni, format='(i10,9g15.5)', -1, pos_s_[*,i], age_s[i], met_s[i], 0.0, Mi_s[i], M_s[i], -666.666
+        printf, uni, format='(i10,9g15.5)', -1, pos_s_[*,i], age_s_[i], met_s[i], 0.0, Mi_s_[i], M_s_[i], -666.666
       endfor
       ; No polvo: comentar siguiente blucle for 
       ; for i=0L, n_g-1 do begin     
-      ;  printf, uni, format='(i10,9g15.5)', 1, pos_g_[*,i], -666.666, met_g[i], rho_g[i], M_g[i], M_g[i], cldx_g[i] 
+      ;  printf, uni, format='(i10,9g15.5)', 1, pos_g_[*,i], -666.666, met_g[i], rho_g_[i], M_g_[i], M_g_[i], cldx_g_[i] 
       ; endfor 
       for i=0L, n_bh-1 do begin
-        printf, uni, format='(i10,9g15.5)', -1, pos_bh_[*,i], 666.666, -666.666, Mdot_bh[i], M_bh[i], M_bh[i], -666.666
+        printf, uni, format='(i10,9g15.5)', -1, pos_bh_[*,i], 666.666, -666.666, Mdot_bh_[i], M_bh_[i], M_bh_[i], -666.666
       endfor
       close, uni
       free_lun, uni
@@ -196,20 +199,22 @@ pro dia_to_g3d, win, ireg, biased_progenitor, direct_progenitor, masks, write=wr
     pos_g_ = [ ]
     pos_s_ = [ ]
     pos_bh_= [ ]
+    M_g_   = [ ]                         
+    M_s_   = [ ]
+    M_bh_  = [ ]
+    Z_g_   = [ ]
+    T_g_   = [ ]
+    Z_s_   = [ ]
+    rho_g_ = [ ]
+    Mi_s_  = [ ]
+    age_s_ = [ ]
+    jovenes= [ ]
+    Modot_bh_= [ ]
+    njov   = 0 
     n_ele  = 0
     met_g  = 0.
     met_s  = 0.
-    M_g_   = 0.                          
-    M_s_   = 0.
-    Mi_s_  = 0.
-    age_s  = 0.
-    njov   = 0 
-    M_bh_  = 0.
-    jovenes= 0
   endfor
 end
 
 
-
-
- 
