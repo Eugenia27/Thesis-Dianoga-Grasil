@@ -62,12 +62,30 @@ pro dia_to_g3d, win, ireg, biased_progenitor, direct_progenitor, masks, write=wr
   readnew, sub_name, ncon, 'NCON'  ; contaminacion de cada halo, si es distinto de cero esta contaminado 
   readnew, sub_name, grnr, 'GRNR'  ; grupo al que pertenece un dado subhalo
   readnew, sub_name, mtot, 'MTOT'  ; masa total de todas las particulas pertenecientes al subhalo
-    
+  readnew, sub_name, m500, 'M500'  ; masa total de todas las particulas pertenecientes al subhalo
+  readnew, sub_name, mvir, 'MVIR'  ; masa total de todas las particulas pertenecientes al subhalo
+  readnew, sub_name, msub, 'MSUB'  ; masa total de todas las particulas pertenecientes al subhalo
+  readnew, sub_name, soff, 'SOFF'  ; masa total de todas las particulas pertenecientes al subhalo
+  readnew, sub_name, pid , 'PID '  ; masa total de todas las particulas pertenecientes al subhalo
+
+  index_no_cont = where(ncon[0:10] eq 0)
+  index_max     = where(m500 eq max(m500[index_no_cont]))
+  index_group   = index_no_cont[index_max] 
+  print, 'MTOT: ', mtot[0:10]   
+  print, 'M500: ', m500[0:10]   
+  print, 'MVIR: ', mvir[0:10]   
+  print, 'MSUB: ', msub[0:10]   
+  print, 'NOT CONT GROUP INDEX: ',index_no_cont
+  print, 'NOT CONT M500: ',m500[index_no_cont]
+  print, 'MAX_INDEX:   ',index_max
+  print, 'GROUP_INDEX: ',index_group
+
   pos_cdm = dblarr(3,2)  
   if biased_progenitor eq 1 then begin
     print,''
     print,'BIASED-PROGENITOR ACTIVATED'
-    pos_cdm[*,0] = spos(*,fsub[0])
+    pos_cdm[*,0] = spos(*,fsub[index_max])
+    progb = index_max
   endif
 
   if direct_progenitor eq 1 then begin
@@ -78,6 +96,7 @@ pro dia_to_g3d, win, ireg, biased_progenitor, direct_progenitor, masks, write=wr
     print,''
     progenitor    = progenitors[1]
     group         = grnr[progenitor]
+    if ncon[group] ne 0 then print, "PROGENITOR'S GROUP IS CONTAMINATED!!!!!!!!!!!!!!!!!!!!!!!!"
     main_of_group = fsub[group]
 
     fname='progenitors.dat'
@@ -114,6 +133,7 @@ pro dia_to_g3d, win, ireg, biased_progenitor, direct_progenitor, masks, write=wr
       pos_s_  = pos_s[*,ind_box_s]   & M_s_=M_s[ind_box_s]    & Mi_s_=Mi_s[ind_box_s] & Z_s_=Z_s[*,ind_box_s]   & age_s_=age_s[ind_box_s] 
       pos_bh_ = pos_bh[*,ind_box_bh] & M_bh_=M_bh[ind_box_bh] & Mdot_bh_=Mdot_bh[ind_box_bh] 
     endif else begin
+
     endelse
   
     ind_dusty=where(cldx_g_ gt 0 or t_g_ lt 1e5, nind_dusty)
@@ -135,18 +155,18 @@ pro dia_to_g3d, win, ireg, biased_progenitor, direct_progenitor, masks, write=wr
     Mdot_bh_ = Mdot_bh_*1e10/hubble*0.98/1e9  
 
     if 1 then begin
-      device, true=24, retain=2, decomposed=0 
-       loadct, 12
-       window, win, xsize=700, ysize=700
-       plot,[0],[0], XRANGE= [-300,300], YRANGE= [-300,300], psym=3, xstyle=1, ystyle=1, /nodata
-       oplot,pos_s_[0,*]/(1+z)/hubble, pos_s_[1,*]/(1+z)/hubble, psym=3, color=100
-       oplot,pos_g_[0,*]/(1+z)/hubble, pos_g_[1,*]/(1+z)/hubble, psym=3, color=200
-       oplot,pos_BH_[0,*], pos_BH[1,*], psym=4, color=cgColor('orange')
-       window, win+1, xsize=700, ysize=700
-       plot, [0], [0], XRANGE= [-300,300], YRANGE= [-300,300], psym=3, xstyle=1, ystyle=1, /nodata
-       oplot, pos_s_[0,*]/(1+z)/hubble, pos_s_[2,*]/(1+z)/hubble, psym=3, color=100
-       oplot, pos_g_[0,*]/(1+z)/hubble, pos_g_[2,*]/(1+z)/hubble, psym=3, color=200
-       oplot, pos_BH_[0,*], pos_BH[2,*], psym=4, color=cgColor('orange')
+      dev = 'ps'
+      win = 0
+      dev = STRUPCASE(dev)
+      set_plot, dev
+      name = 'D'+strtrim(string(ireg),2)+'_'+progen_type+'_XYproj.eps'
+      DEVICE, FILENAME= name, DECOMPOSED=1, /color, /encapsulated,xsize=20, ysize=14, /portrait
+      plot,[0],[0], XRANGE= [-250,250], YRANGE= [-250,250], XTITLE= 'x [kpc]', YTITLE= 'y [kpc]', $
+          TITLE= 'D'+strtrim(string(ireg),2) , CHARSIZE= 1.7, CHARTHICK= 2, XTHICK= 2, YTHICK= 2, xstyle=1, ystyle=1, /nodata
+      oplot,pos_s_[0,*]/(1+z)/hubble, pos_s_[1,*]/(1+z)/hubble, psym=3, color=cgColor('dodger blue')
+      oplot,pos_g_[0,*]/(1+z)/hubble, pos_g_[1,*]/(1+z)/hubble, psym=3, color=cgColor('red');   200
+      oplot,pos_BH_[0,*]/(1+z)/hubble, pos_BH_[1,*]/(1+z)/hubble, psym=2, color=cgColor('black'), SYMSIZE= 0.7, THICK= 2
+      DEVICE, /CLOSE_FILE
      endif
  
     ; all units conversions

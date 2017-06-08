@@ -11,17 +11,12 @@ Solar_mass             = 1.98855e30    # kg
 factor = Kilo_parsec/Solar_mass
 
 #Simu data
-snap = '032'
+snap = '091'
 flav = 'BH2015'
 agn_good = [0,0,0,1,1,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,0,0,1,0,1,0,0,0,0,1]
 direct_progenitor_032 = [0,0,0,0,36,32,82,0,0,0,0,0,2,0,0,0,183,0,0,0,0,0,0,0,0,0,0,0,0,1]
 direct_progenitor_041 = [0,0,0,0,0,54,160,231,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
-#Vectors declaration
-r500 = np.zeros(10)
-m500 = np.zeros(10)
-r200 = np.zeros(10)
-m200 = np.zeros(10)
 
  
 #Calculating Rho_critic
@@ -41,9 +36,9 @@ def Particle_data(_particle_type,_path,_redshift,_hubble_parameter):
 def SubHalo_data(_path):    
     fsub_ = G.read_block(_path, 'FSUB')
     grnr_ = G.read_block(_path, 'GRNR')
-    #ncon_ = G.read_block(_path, 'NCON') parece que no esta definido en el pipeline de python
+    ncon_ = G.read_block(_path, 'NCON') #parece que no esta definido en el pipeline de python
     spos_ = G.read_block(_path, 'SPOS')
-    return fsub_, grnr_, spos_    #fsub_, grnr_, ncon_, spos_
+    return fsub_, grnr_, ncon_, spos_
 
 def Rho_critic(_redshift,_hubble_parameter,_omega_matter,_omega_lambda):
     E = omega_matter*(1+_redshift)**3+omega_lambda
@@ -76,7 +71,7 @@ def Total_mass_inside_Rcrit(_sorted_distances, _sorted_masses, _rho_critic, _red
     deltar  = 2.5
     rho_sphere_array=[0]
     rho_sphere = 0
-    rho_crit500=500*2346.5392#_rho_critic
+    rho_crit500=500*_rho_critic
     rho_crit200=200*_rho_critic
 
     r = _sorted_distances
@@ -118,8 +113,8 @@ def BCG_masses(_pos_s, _mass_s, _origin, _r500, _redshift,_hubble_parameter):
     r50     = 50
     r70     = 70
     r10R500 = 0.1*_r500
-
     for i in range(len(_mass_s)):
+        #print i, sorted_stars_distances[i]
         if sorted_stars_distances[i]<r30:
             m30_ = m30_ + sorted_stars_masses[i]
         if sorted_stars_distances[i]<r50:
@@ -135,9 +130,15 @@ def BCG_masses(_pos_s, _mass_s, _origin, _r500, _redshift,_hubble_parameter):
 
 #Main Code
 i=0
-while i<4:
+while i<29:
     i+=1
     if agn_good[i]:
+        #Vectors declaration
+        r500 = np.zeros(10)
+        m500 = np.zeros(10)
+        r200 = np.zeros(10)
+        m200 = np.zeros(10)
+        m200 = np.zeros(10)
         print '==============================================================================================================='
         region = 'D'+str(i)
         region+': I AM A GOOD REGION'
@@ -156,7 +157,8 @@ while i<4:
         pos_s  , mass_s  = Particle_data(4,snap_path,redshift,hubble_parameter)            #reading positions and mass of star        particles                                                       
         pos_bh , mass_bh = Particle_data(5,snap_path,redshift,hubble_parameter)            #reading positions and mass of black holes particles                                                                
 
-        fsub, grnr, spos = SubHalo_data(sub_path)                                          #invoking subfind blocks
+        fsub, grnr, ncon, spos = SubHalo_data(sub_path)                                          #invoking subfind blocks
+        print ncon[:10]
 
 #-------loop to find the principal group in the snap       
         for j in range(10): 
@@ -166,6 +168,9 @@ while i<4:
             s_particle_distance  = Distance_respect_to_r0(pos_s  , origin, False)
             bh_particle_distance = Distance_respect_to_r0(pos_bh , origin, False)
 
+            if ncon[j]!=0:
+                continue
+
             distances_total_particles = np.concatenate((g_particle_distance, dm_particle_distance, s_particle_distance, bh_particle_distance),axis=0)
             masses_total_particles    = np.concatenate((mass_g, mass_dm, mass_s, mass_bh),axis=0)
 
@@ -173,6 +178,7 @@ while i<4:
             r500[j], m500[j], r200[j], m200[j] = Total_mass_inside_Rcrit(sorted_distances, sorted_masses, rho_critic, redshift, hubble_parameter) 
             print ' '
             print '..................DATA FOR GROUP: '+str(j)+'........................'
+            print 'ORIGIN: ', origin
             print ('R500 = {r5:5.5g}  M500 = {m5:10.5g}'.format(r5=r500[j],m5=m500[j]))
             print ('R200 = {r2:5.5g}  M200 = {m2:10.5g}'.format(r2=r200[j],m2=m200[j]))
 
@@ -193,6 +199,9 @@ while i<4:
         m200max_array  = m200[max_index]
         m200max_scalar = m200max_array[0]
 
+        origin = spos[fsub[main_group_scalar],:]/((1+redshift)*hubble_parameter)
+
+        print 'ORIGIN: ', origin
         m30, m50, m70, m10R500 = BCG_masses(pos_s, mass_s, origin, r500max_scalar, redshift, hubble_parameter)
 
         print ' '
@@ -211,31 +220,33 @@ while i<4:
 #-------Direct Progenitor-BCGS masses
         print ' '
         print '******DIRECT PROGENITOR******'
-        print ' '
 
         if snap=='032':
             progenitor = direct_progenitor_032[i]
-        if snap=='042': 
+        if snap=='041': 
             progenitor = direct_progenitor_041[i]
+        if snap=='091':
+            continue
 
         group         = grnr[progenitor]
         main_of_group = fsub[group]
         
         if group==main_group_scalar:
+            r500_progenitor     = r500max_scalar
+            m500_progenitor     = m500max_scalar
+            r200_progenitor     = r200max_scalar
+            m200_progenitor     = m200max_scalar
             if  main_of_group==progenitor:
                 print 'DIRECT PROGENITOR IS THE SAME AS THE BIASED PROGENITOR'
-                r500_progenitor     = r500max_scalar
-                m500_progenitor     = m500max_scalar
-                r200_progenitor     = r200max_scalar
-                m200_progenitor     = m200max_scalar
                 m30_progenitor      = m30
                 m50_progenitor      = m50
                 m70_progenitor      = m70
                 m10R500_progenitor  = m10R500
             else: 
-                print 'DIRECT PROGENITOR IS THE MAIN GROUP BUT IS NOT THE BIASED PROGENITOR'
+                print 'DIRECT PROGENITOR IS IN THE MAIN GROUP BUT IS NOT THE BIASED PROGENITOR'
                 origin = spos[progenitor,:]/((1+redshift)*hubble_parameter)
-                m30_progenitor, m50_progenitor, m70_progenitor, m10R500_progenitor = BCG_masses(pos_s, mass_s, origin, progenitor, redshift, hubble_parameter) 
+                print 'ORIGIN: ', origin
+                m30_progenitor, m50_progenitor, m70_progenitor, m10R500_progenitor = BCG_masses(pos_s, mass_s, origin, r500max_scalar, redshift, hubble_parameter) 
         else:
             print 'DIRECT PROGENITOR.S GROUP IS DIFFERENT OF 0'
             r500_progenitor = r500[group]
@@ -243,6 +254,7 @@ while i<4:
             r200_progenitor = r200[group]
             m200_progenitor = m200[group]
             origin = spos[progenitor,:]/((1+redshift)*hubble_parameter)
+            print 'ORIGIN: ', origin
             m30_progenitor, m50_progenitor, m70_progenitor, m10R500_progenitor = BCG_masses(pos_s, mass_s, origin, r500_progenitor, redshift, hubble_parameter)
      
         print ' '
