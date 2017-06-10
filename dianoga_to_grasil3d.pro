@@ -1,4 +1,4 @@
-pro dia_to_g3d, win, ireg, auto=auto, write=write
+pro dia_to_g3dv, win, ireg, auto=auto, write=write
   ;MIND THE FLAVOR, largheza box!
   ; correr con auto si se desea centrar el box usando subfind
   

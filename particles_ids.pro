@@ -34,11 +34,6 @@ function particles_ids, idhalo, todoelhalo, misub, soff, fsub, pid
     fin       = soff[misubl+1]-1
   endelse
   
-  
-  
-  
-  
-  
   my_ids = ulonarr(fin-ini+1)
   
   for i= ini, fin do begin
